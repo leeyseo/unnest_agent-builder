@@ -13,6 +13,14 @@ const CATEGORY_LABELS: Record<string, string> = {
   formatters: "포맷터",
 };
 
+// KB 드래그 시 선택 가능한 검색 전략 (기본 드래그 = 하이브리드)
+const KB_STRATEGIES: { type: string; label: string; title: string }[] = [
+  { type: "HybridRetriever", label: "하이브리드", title: "벡터+키워드 RRF 융합 (권장 기본값)" },
+  { type: "Neo4jRetriever", label: "벡터", title: "의미 유사도 검색" },
+  { type: "KeywordRetriever", label: "키워드", title: "풀텍스트 검색 — 고유명사·조문번호에 강함" },
+  { type: "Neo4jWriter", label: "적재", title: "이 KB에 기록하는 Writer 노드" },
+];
+
 function DraggableComponent({ spec }: { spec: ComponentSpec }) {
   return (
     <div
@@ -33,6 +41,11 @@ function DraggableComponent({ spec }: { spec: ComponentSpec }) {
   );
 }
 
+interface PendingUpload {
+  kbId: string;
+  file: File;
+}
+
 export function Sidebar() {
   const specs = useStore((s) => s.specs);
   const kbs = useStore((s) => s.kbs);
@@ -44,6 +57,10 @@ export function Sidebar() {
   const [busyKb, setBusyKb] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const uploadTarget = useRef<string | null>(null);
+  // 업로드 확정 전 상태: 적재 flow 선택 모달
+  const [pending, setPending] = useState<PendingUpload | null>(null);
+  const [ingestFlows, setIngestFlows] = useState<{ id: string; name: string }[]>([]);
+  const [selectedIngest, setSelectedIngest] = useState("");
 
   const categories = [...new Set(specs.map((s) => s.category))];
 
@@ -57,7 +74,7 @@ export function Sidebar() {
     log(`KB '${newKbName}' 생성 중... (Neo4j 컨테이너 기동, 1~2분 소요)`);
     try {
       const kb = await api.createKb(newKbName.trim());
-      log(`KB '${kb.kb_id}' 준비 완료 (${kb.bolt_uri})`);
+      log(`KB '${kb.kb_id}' 준비 완료`);
       setNewKbName("");
       await refreshKbs();
     } catch (ex) {
@@ -68,30 +85,57 @@ export function Sidebar() {
     }
   }
 
+  async function deleteKb(kbId: string) {
+    if (!confirm(
+      `KB '${kbId}'를 삭제할까요?\n컨테이너가 제거되고 카탈로그에서 사라집니다. (데이터 볼륨은 남습니다)`,
+    )) return;
+    try {
+      await api.deleteKb(kbId);
+      log(`KB '${kbId}' 삭제됨`);
+      await refreshKbs();
+    } catch (ex) {
+      alert(`삭제 실패: ${(ex as Error).message}`);
+    }
+  }
+
   function pickFileFor(kbId: string) {
     uploadTarget.current = kbId;
     fileRef.current?.click();
   }
 
+  /** 파일 선택 → 적재 flow 선택 모달을 띄운다. */
   async function onFilePicked(file: File | undefined) {
     const kbId = uploadTarget.current;
     if (!file || !kbId) return;
+    const flows = (await api.flows()).filter((f) => f.is_ingest);
+    setIngestFlows(flows);
+    setSelectedIngest(""); // "" = 확장자 자동 선택
+    setPending({ kbId, file });
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
+  async function startUpload() {
+    if (!pending) return;
+    const { kbId, file } = pending;
+    setPending(null);
     setBusyKb(kbId);
-    log(`'${file.name}' → KB '${kbId}' 적재 시작`);
+    const flowLabel = selectedIngest
+      ? ingestFlows.find((f) => f.id === selectedIngest)?.name
+      : "자동 (확장자 기준)";
+    log(`'${file.name}' → KB '${kbId}' 적재 시작 [${flowLabel}]`);
     try {
       await uploadDocument(kbId, file, (ev) => {
         applyEvent(ev);
-        if (ev.event === "node_started") log(`  [적재] ${ev.node_id} 실행...`);
         if (ev.event === "node_failed") log(`  [적재] 실패: ${ev.error}`);
         if (ev.event === "document_done")
           log(`적재 ${ev.status === "done" ? "완료" : "실패"} — 청크 ${ev.chunks_written}개`);
-      });
+      }, selectedIngest || undefined);
       await refreshKbs();
     } catch (ex) {
       log(`적재 실패: ${(ex as Error).message}`);
+      alert(`적재 실패: ${(ex as Error).message}`);
     } finally {
       setBusyKb(null);
-      if (fileRef.current) fileRef.current.value = "";
     }
   }
 
@@ -127,34 +171,47 @@ export function Sidebar() {
           <div
             className="kb-main"
             draggable
-            title="캔버스로 드래그하면 이 KB로 프리셋된 Neo4j 검색 노드가 생성됩니다"
+            title="드래그 = 하이브리드 검색 노드 생성 (아래 칩으로 다른 전략 선택)"
             onDragStart={(e) =>
               e.dataTransfer.setData(
                 "application/x-component",
-                JSON.stringify({ type: "Neo4jRetriever", params: { kb_id: kb.kb_id } }),
+                JSON.stringify({ type: "HybridRetriever", params: { kb_id: kb.kb_id } }),
               )
             }
           >
             <span className={`kb-dot kb-${kb.status}`} />
             <span className="kb-name">{kb.kb_id}</span>
             <span className="kb-docs">{kb.doc_count}건</span>
+            <button
+              className="kb-delete"
+              title="KB 삭제"
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteKb(kb.kb_id);
+              }}
+            >
+              ×
+            </button>
           </div>
           <div className="kb-actions">
-            <span
-              className="kb-chip"
-              draggable
-              title="적재(Writer) 노드로 드래그"
-              onDragStart={(e) =>
-                e.dataTransfer.setData(
-                  "application/x-component",
-                  JSON.stringify({ type: "Neo4jWriter", params: { kb_id: kb.kb_id } }),
-                )
-              }
-            >
-              적재노드
-            </span>
+            {KB_STRATEGIES.map((s) => (
+              <span
+                key={s.type}
+                className="kb-chip"
+                draggable
+                title={s.title}
+                onDragStart={(e) =>
+                  e.dataTransfer.setData(
+                    "application/x-component",
+                    JSON.stringify({ type: s.type, params: { kb_id: kb.kb_id } }),
+                  )
+                }
+              >
+                {s.label}
+              </span>
+            ))}
             <button
-              className="kb-chip"
+              className="kb-chip kb-upload"
               disabled={busyKb === kb.kb_id}
               onClick={() => pickFileFor(kb.kb_id)}
             >
@@ -170,6 +227,39 @@ export function Sidebar() {
         style={{ display: "none" }}
         onChange={(e) => onFilePicked(e.target.files?.[0])}
       />
+
+      {pending && (
+        <div className="modal-backdrop" onClick={() => setPending(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>문서 적재 — 파이프라인 선택</h3>
+            <p className="muted">
+              '{pending.file.name}' → KB '{pending.kbId}'
+            </p>
+            <select
+              value={selectedIngest}
+              onChange={(e) => setSelectedIngest(e.target.value)}
+            >
+              <option value="">자동 (확장자 기준 기본 파이프라인)</option>
+              {ingestFlows.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
+            <p className="muted">
+              파서·청커·임베딩 조합을 직접 정하려면 캔버스에서
+              FileInput → 파서 → 청커 → 임베더 → Neo4j 적재 flow를 만들어 저장하세요.
+              저장된 적재 flow가 이 목록에 나타납니다.
+            </p>
+            <div className="modal-actions">
+              <button onClick={() => setPending(null)}>취소</button>
+              <button className="run-btn" onClick={startUpload}>
+                적재 시작
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

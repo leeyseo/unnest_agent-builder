@@ -120,7 +120,7 @@ export function Toolbar() {
 
   return (
     <header className="toolbar">
-      <strong className="brand">Agent Platform</strong>
+      <strong className="brand">Unnest</strong>
       <input
         className="flow-name"
         value={flowName}

@@ -25,7 +25,10 @@ export const api = {
     }).then((r) => j<KB>(r)),
   deleteKb: (kbId: string) =>
     fetch(`/api/kb/${kbId}`, { method: "DELETE" }).then((r) => j(r)),
-  flows: () => fetch("/api/flows").then((r) => j<{ id: string; name: string }[]>(r)),
+  flows: () =>
+    fetch("/api/flows").then((r) =>
+      j<{ id: string; name: string; is_ingest: boolean }[]>(r),
+    ),
   getFlow: (id: string) =>
     fetch(`/api/flows/${id}`).then((r) => j<{ id: string; name: string; flow: FlowJson }>(r)),
   createFlow: (flow: FlowJson) =>
@@ -102,9 +105,15 @@ export function runFlow(flowId: string, input: Record<string, unknown>, onEvent:
   );
 }
 
-export function uploadDocument(kbId: string, file: File, onEvent: (ev: RunEvent) => void) {
+export function uploadDocument(
+  kbId: string,
+  file: File,
+  onEvent: (ev: RunEvent) => void,
+  ingestFlowId?: string,
+) {
   const fd = new FormData();
   fd.append("file", file);
   fd.append("kb_id", kbId);
+  if (ingestFlowId) fd.append("ingest_flow_id", ingestFlowId);
   return streamRun("/api/documents", fd, {}, onEvent);
 }

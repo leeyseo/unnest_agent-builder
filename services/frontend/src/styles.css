@@ -69,6 +69,26 @@ input, select, textarea {
   font-size: 10px; padding: 2px 6px; background: #27272a;
   border: 1px solid #3f3f46; border-radius: 4px; cursor: grab; color: #a1a1aa;
 }
+.kb-chip:hover { border-color: #a78bfa; color: #e4e4e7; }
+.kb-upload { cursor: pointer; }
+.kb-delete {
+  padding: 0 6px; font-size: 12px; line-height: 1.4; border: none;
+  background: transparent; color: #71717a;
+}
+.kb-delete:hover { color: #ef4444; background: transparent; }
+
+/* ---------- Modal ---------- */
+.modal-backdrop {
+  position: fixed; inset: 0; background: #000000aa; z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal {
+  width: 420px; background: #18181b; border: 1px solid #3f3f46;
+  border-radius: 12px; padding: 18px;
+}
+.modal h3 { margin: 0 0 8px; }
+.modal select { margin: 8px 0; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 
 /* ---------- Canvas & Nodes ---------- */
 .canvas { flex: 1; min-width: 0; }

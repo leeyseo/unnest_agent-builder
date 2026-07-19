@@ -15,7 +15,7 @@ from agentengine import Flow
 from . import credentials, db, ingest, provisioner, runner
 from .config import UPLOAD_DIR
 
-app = FastAPI(title="Agent Platform Backend", version="0.1.0")
+app = FastAPI(title="Unnest Backend", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -88,8 +88,20 @@ def _validate_flow(flow_dict: dict) -> Flow:
 
 @app.get("/api/flows")
 def list_flows() -> list[dict]:
-    rows = db.query("SELECT id, name, created_at, updated_at FROM flows ORDER BY updated_at DESC")
-    return rows
+    rows = db.query("SELECT id, name, json, created_at, updated_at FROM flows ORDER BY updated_at DESC")
+    out = []
+    for row in rows:
+        try:
+            types = {n.get("type") for n in json.loads(row["json"]).get("nodes", [])}
+        except Exception:
+            types = set()
+        out.append({
+            "id": row["id"], "name": row["name"],
+            "created_at": row["created_at"], "updated_at": row["updated_at"],
+            # 적재 flow 여부: 파일 진입점 + KB 기록 노드를 모두 가진 flow
+            "is_ingest": "FileInput" in types and "Neo4jWriter" in types,
+        })
+    return out
 
 
 @app.post("/api/flows")
