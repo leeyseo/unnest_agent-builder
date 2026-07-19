@@ -9,8 +9,8 @@ import re
 from agentsdk import Chunk, Component, NormalizedDocument, param, port
 from agentengine import BAD_INPUT, EngineError
 
-# 제12조, 제12조의2, 제 12 조(제목) 등
-_ARTICLE = re.compile(r"(제\s*\d+\s*조(?:의\s*\d+)?)\s*(?:\(([^)]*)\))?")
+# 제12조, 제12조의2, 제 12 조(제목) 등 — 줄 시작에서만 (본문 속 "제7조를 위반" 참조 제외)
+_ARTICLE = re.compile(r"^[ \t]*(제\s*\d+\s*조(?:의\s*\d+)?)\s*(?:\(([^)]*)\))?", re.MULTILINE)
 
 
 class ArticleChunker(Component):
