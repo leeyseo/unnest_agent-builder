@@ -61,6 +61,9 @@ export function Sidebar() {
   const [pending, setPending] = useState<PendingUpload | null>(null);
   const [ingestFlows, setIngestFlows] = useState<{ id: string; name: string }[]>([]);
   const [selectedIngest, setSelectedIngest] = useState("");
+  // "__custom__" 모드: 파서×청커 직접 조합
+  const [customParser, setCustomParser] = useState("");
+  const [customChunker, setCustomChunker] = useState("SimpleChunker");
 
   const categories = [...new Set(specs.map((s) => s.category))];
 
@@ -114,14 +117,50 @@ export function Sidebar() {
     if (fileRef.current) fileRef.current.value = "";
   }
 
+  /** 파서×청커 직접 조합 → 적재 flow를 만들거나 재사용하고 id를 돌려준다. */
+  async function ensureComboFlow(parser: string, chunker: string): Promise<string> {
+    const name = `적재조합: ${parser} + ${chunker}`;
+    const existing = (await api.flows()).find((f) => f.name === name);
+    if (existing) return existing.id;
+    const flow = {
+      version: "1",
+      name,
+      nodes: [
+        { id: "n1", type: "FileInput", params: {} },
+        { id: "n2", type: parser, params: {} },
+        { id: "n3", type: chunker, params: {} },
+        { id: "n4", type: "LocalEmbedder", params: {} },
+        { id: "n5", type: "Neo4jWriter", params: { kb_id: "" } },
+      ],
+      edges: [
+        { from: ["n1", "file"] as [string, string], to: ["n2", "file"] as [string, string] },
+        { from: ["n2", "document"] as [string, string], to: ["n3", "document"] as [string, string] },
+        { from: ["n3", "chunks"] as [string, string], to: ["n4", "chunks"] as [string, string] },
+        { from: ["n4", "embedded"] as [string, string], to: ["n5", "chunks"] as [string, string] },
+      ],
+      ui: { positions: { n1: [60, 200], n2: [300, 200], n3: [540, 200], n4: [780, 200], n5: [1020, 200] } as Record<string, [number, number]> },
+    };
+    const created = await api.createFlow(flow);
+    return created.id;
+  }
+
   async function startUpload() {
     if (!pending) return;
     const { kbId, file } = pending;
-    setPending(null);
-    setBusyKb(kbId);
-    const flowLabel = selectedIngest
+    let flowId = selectedIngest;
+    let flowLabel = selectedIngest
       ? ingestFlows.find((f) => f.id === selectedIngest)?.name
       : "자동 (확장자 기준)";
+    if (selectedIngest === "__custom__") {
+      if (!customParser) {
+        alert("파서를 선택하세요.");
+        return;
+      }
+      flowId = await ensureComboFlow(customParser, customChunker);
+      flowLabel = `${customParser} + ${customChunker}`;
+    }
+    setPending(null);
+    setBusyKb(kbId);
     log(`'${file.name}' → KB '${kbId}' 적재 시작 [${flowLabel}]`);
     try {
       await uploadDocument(kbId, file, (ev) => {
@@ -129,7 +168,7 @@ export function Sidebar() {
         if (ev.event === "node_failed") log(`  [적재] 실패: ${ev.error}`);
         if (ev.event === "document_done")
           log(`적재 ${ev.status === "done" ? "완료" : "실패"} — 청크 ${ev.chunks_written}개`);
-      }, selectedIngest || undefined);
+      }, flowId || undefined);
       await refreshKbs();
     } catch (ex) {
       log(`적재 실패: ${(ex as Error).message}`);
@@ -240,16 +279,37 @@ export function Sidebar() {
               onChange={(e) => setSelectedIngest(e.target.value)}
             >
               <option value="">자동 (확장자 기준 기본 파이프라인)</option>
+              <option value="__custom__">직접 조합 — 파서 × 청커 선택...</option>
               {ingestFlows.map((f) => (
                 <option key={f.id} value={f.id}>
                   {f.name}
                 </option>
               ))}
             </select>
+            {selectedIngest === "__custom__" && (
+              <div className="combo-row">
+                <label>
+                  <span className="muted">파서</span>
+                  <select value={customParser} onChange={(e) => setCustomParser(e.target.value)}>
+                    <option value="">선택...</option>
+                    {specs.filter((s) => s.category === "parsers").map((s) => (
+                      <option key={s.type} value={s.type}>{s.display_name}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span className="muted">청커</span>
+                  <select value={customChunker} onChange={(e) => setCustomChunker(e.target.value)}>
+                    {specs.filter((s) => s.category === "chunkers").map((s) => (
+                      <option key={s.type} value={s.type}>{s.display_name}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            )}
             <p className="muted">
-              파서·청커·임베딩 조합을 직접 정하려면 캔버스에서
-              FileInput → 파서 → 청커 → 임베더 → Neo4j 적재 flow를 만들어 저장하세요.
-              저장된 적재 flow가 이 목록에 나타납니다.
+              선택한 조합은 "적재조합: 파서+청커" flow로 저장돼 캔버스에서 열어
+              파라미터(청크 크기 등)를 수정할 수 있고, 다음부터 목록에 나타납니다.
             </p>
             <div className="modal-actions">
               <button onClick={() => setPending(null)}>취소</button>

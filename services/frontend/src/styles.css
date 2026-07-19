@@ -89,6 +89,9 @@ input, select, textarea {
 .modal h3 { margin: 0 0 8px; }
 .modal select { margin: 8px 0; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.combo-row { display: flex; gap: 8px; margin: 6px 0; }
+.combo-row label { flex: 1; }
+.combo-row label > span { display: block; margin-bottom: 3px; }
 
 /* ---------- Canvas & Nodes ---------- */
 .canvas { flex: 1; min-width: 0; }
