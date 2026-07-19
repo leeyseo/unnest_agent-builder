@@ -72,6 +72,13 @@ def create_kb(name: str) -> dict:
     password = secrets.token_urlsafe(16)
     credentials.store(_cred_name(kb_id), password)
 
+    # 같은 이름의 고아 볼륨이 남아 있으면 제거 — 옛 비밀번호가 남아 새 KB 인증이
+    # 전부 실패(AuthenticationRateLimit)하는 사고 방지 (카탈로그에 없으므로 안전)
+    try:
+        client.volumes.get(f"kbdata_{kb_id}").remove(force=True)
+    except Exception:
+        pass
+
     # 내부 네트워크 보장
     try:
         client.networks.get(KB_NETWORK)
@@ -126,6 +133,7 @@ def create_kb(name: str) -> dict:
 
 def _wait_bolt_ready(bolt_uri: str, password: str, timeout_s: int = 180) -> None:
     import neo4j
+    from neo4j.exceptions import AuthError
 
     deadline = time.time() + timeout_s
     last_err: Exception | None = None
@@ -135,6 +143,12 @@ def _wait_bolt_ready(bolt_uri: str, password: str, timeout_s: int = 180) -> None
             driver.verify_connectivity()
             driver.close()
             return
+        except AuthError as ex:
+            # 인증 실패는 기다려도 해결되지 않는다 — 재시도하면 rate-limit에 걸린다
+            raise ProvisionError(
+                "Neo4j 인증 실패 — 볼륨에 이전 KB의 인증정보가 남아 있을 수 있습니다. "
+                f"'docker volume rm' 후 재생성하세요. ({ex})"
+            ) from ex
         except Exception as ex:  # 기동 중 접속 거부는 정상
             last_err = ex
             time.sleep(2)
@@ -188,6 +202,11 @@ def delete_kb(kb_id: str) -> None:
         container.remove(force=True)
     except Exception:
         pass  # 컨테이너가 이미 없어도 카탈로그는 정리
+    # 볼륨도 함께 제거 — 남겨두면 같은 이름 재생성 시 옛 비밀번호와 충돌한다
+    try:
+        client.volumes.get(f"kbdata_{kb_id}").remove(force=True)
+    except Exception:
+        pass
     db.execute("DELETE FROM kb WHERE kb_id = ?", (kb_id,))
     db.execute("DELETE FROM documents WHERE kb_id = ?", (kb_id,))
     credentials.delete(_cred_name(kb_id))

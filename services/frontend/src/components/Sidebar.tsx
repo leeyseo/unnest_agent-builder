@@ -90,7 +90,7 @@ export function Sidebar() {
 
   async function deleteKb(kbId: string) {
     if (!confirm(
-      `KB '${kbId}'를 삭제할까요?\n컨테이너가 제거되고 카탈로그에서 사라집니다. (데이터 볼륨은 남습니다)`,
+      `KB '${kbId}'를 삭제할까요?\n컨테이너와 저장된 문서 데이터가 모두 삭제됩니다. 되돌릴 수 없습니다.`,
     )) return;
     try {
       await api.deleteKb(kbId);

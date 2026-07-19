@@ -38,10 +38,12 @@ def vector_search(session, kb_id: str, query_vec: list[float], top_k: int) -> li
 
 def keyword_search(session, kb_id: str, query_text: str, top_k: int) -> list[RetrievalHit]:
     ensure_fulltext_index(session)
-    # Lucene 특수문자 제거 후 단어 OR 검색
+    # Lucene 특수문자 제거 후 단어 OR 검색.
+    # 한국어는 조사·접미가 붙으므로 접두 일치(단어*)도 함께 건다 ("점검" → "점검용" 매칭)
     terms = re.sub(r'[+\-!(){}\[\]^"~*?:\\/]', " ", query_text).split()
     if not terms:
         return []
+    lucene_query = " OR ".join(f"({t} OR {t}*)" for t in terms)
     records = session.run(
         """
         CALL db.index.fulltext.queryNodes('chunk_text', $q)
@@ -53,7 +55,7 @@ def keyword_search(session, kb_id: str, query_text: str, top_k: int) -> list[Ret
         ORDER BY score DESC
         LIMIT $top_k
         """,
-        q=" OR ".join(terms),
+        q=lucene_query,
         top_k=top_k,
         kb_id=kb_id,
     ).data()

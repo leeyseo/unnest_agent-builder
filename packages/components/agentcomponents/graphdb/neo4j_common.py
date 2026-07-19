@@ -12,10 +12,18 @@ def open_driver(context: ExecutionContext, kb_id: str):
     import neo4j
     from neo4j.exceptions import AuthError, ServiceUnavailable
 
-    conn = context.resolve_kb(kb_id)
+    try:
+        conn = context.resolve_kb(kb_id)
+    except KeyError as ex:
+        raise EngineError(
+            f"KB '{kb_id}'가 카탈로그에 없습니다 — 노드의 KB ID를 확인하거나 KB를 먼저 생성하세요.",
+            "bad_input",
+        ) from ex
     try:
         driver = neo4j.GraphDatabase.driver(
-            conn["uri"], auth=(conn["user"], conn["password"])
+            conn["uri"],
+            auth=(conn["user"], conn["password"]),
+            notifications_min_severity="OFF",  # 스키마 워밍업 경고가 로그를 덮지 않게
         )
         driver.verify_connectivity()
         return driver

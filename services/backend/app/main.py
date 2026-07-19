@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import uuid
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -148,14 +149,29 @@ def delete_flow(flow_id: str) -> dict:
 @app.get("/api/flows/{flow_id}/export")
 def export_flow(flow_id: str):
     data = get_flow(flow_id)
+    # HTTP 헤더는 latin-1 전용 — 한글 flow 이름은 RFC 5987로 인코딩
+    fname = quote(f"{data['name']}.flow.json")
     return JSONResponse(
         content=data["flow"],
-        headers={"Content-Disposition": f'attachment; filename="{data["name"]}.flow.json"'},
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{fname}"},
     )
 
 
 class RunBody(BaseModel):
     input: dict = {}
+
+
+# 주의: 정적 경로(adhoc)는 반드시 /{flow_id}/run 보다 먼저 선언해야 매칭된다
+@app.post("/api/flows/adhoc/run")
+def run_adhoc(body: FlowBody) -> StreamingResponse:
+    """저장 전 캔버스 상태 그대로 실행 (플레이그라운드)."""
+    _validate_flow(body.flow)
+
+    def stream():
+        for ev in runner.run_flow_events(body.flow, body.flow.get("__input__", {}), flow_id=None):
+            yield runner.sse_format(ev)
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
 
 
 @app.post("/api/flows/{flow_id}/run")
@@ -164,18 +180,6 @@ def run_flow(flow_id: str, body: RunBody) -> StreamingResponse:
 
     def stream():
         for ev in runner.run_flow_events(data["flow"], body.input, flow_id=flow_id):
-            yield runner.sse_format(ev)
-
-    return StreamingResponse(stream(), media_type="text/event-stream")
-
-
-@app.post("/api/flows/adhoc/run")
-def run_adhoc(body: FlowBody) -> StreamingResponse:
-    """저장 전 캔버스 상태 그대로 실행 (플레이그라운드)."""
-    _validate_flow(body.flow)
-
-    def stream():
-        for ev in runner.run_flow_events(body.flow, body.flow.get("__input__", {}), flow_id=None):
             yield runner.sse_format(ev)
 
     return StreamingResponse(stream(), media_type="text/event-stream")
