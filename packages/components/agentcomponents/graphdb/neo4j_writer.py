@@ -52,7 +52,8 @@ class Neo4jWriter(Component):
                     WITH d
                     UNWIND $rows AS row
                     CREATE (c:Chunk {kb_id: $kb_id, text: row.text, seq: row.seq,
-                                     pages: row.pages, embedding: row.embedding})
+                                     pages: row.pages, article_no: row.article_no,
+                                     embedding: row.embedding})
                     CREATE (d)-[:HAS_CHUNK]->(c)
                     RETURN count(c) AS written
                     """,
@@ -64,6 +65,7 @@ class Neo4jWriter(Component):
                             "text": c.text,
                             "seq": c.meta.get("seq", i),
                             "pages": c.meta.get("pages", []),
+                            "article_no": c.meta.get("article_no"),
                             "embedding": c.embedding,
                         }
                         for i, c in enumerate(self.chunks)

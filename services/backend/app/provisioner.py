@@ -158,6 +158,9 @@ def _init_kb_schema(bolt_uri: str, password: str, kb_id: str, embed_model: str, 
                 """
             )
             session.run(
+                "CREATE FULLTEXT INDEX chunk_text IF NOT EXISTS FOR (c:Chunk) ON EACH [c.text]"
+            )
+            session.run(
                 "MERGE (m:KBMeta {kb_id: $kb_id}) "
                 "SET m.embed_model = $embed_model, m.dim = $dim, m.created_at = datetime()",
                 kb_id=kb_id, embed_model=embed_model, dim=dim,

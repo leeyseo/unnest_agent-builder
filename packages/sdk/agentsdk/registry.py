@@ -23,7 +23,8 @@ class ComponentRegistry:
 
     def _collect(self, base: type[Component]) -> None:
         for sub in base.__subclasses__():
-            if getattr(sub, "abstract", False) is not True and sub._inputs is not None:
+            # abstract 표시는 상속되지 않게 클래스 자신의 속성만 본다
+            if sub.__dict__.get("abstract", False) is not True:
                 self.register(sub)
             self._collect(sub)
 

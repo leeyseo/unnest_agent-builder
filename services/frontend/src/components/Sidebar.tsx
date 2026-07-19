@@ -166,7 +166,7 @@ export function Sidebar() {
       <input
         ref={fileRef}
         type="file"
-        accept=".pdf"
+        accept=".pdf,.docx,.hwpx,.txt,.md"
         style={{ display: "none" }}
         onChange={(e) => onFilePicked(e.target.files?.[0])}
       />

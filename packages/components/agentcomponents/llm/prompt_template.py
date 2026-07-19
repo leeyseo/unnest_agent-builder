@@ -32,10 +32,16 @@ class PromptTemplate(Component):
         if self.question is None:
             raise EngineError("질문 입력이 연결되지 않았습니다.", BAD_INPUT)
         hits = self.context or []
+        def cite(h: RetrievalHit) -> str:
+            parts = [h.provenance.get("doc_title", "?")]
+            if h.provenance.get("article_no"):
+                parts.append(str(h.provenance["article_no"]))
+            if h.provenance.get("pages"):
+                parts.append("p." + ",".join(map(str, h.provenance["pages"])))
+            return " ".join(parts)
+
         context_text = "\n\n".join(
-            f"[{i + 1}] ({h.provenance.get('doc_title', '?')}"
-            f" p.{','.join(map(str, h.provenance.get('pages') or []))}, "
-            f"유사도 {h.score:.2f})\n{h.text}"
+            f"[{i + 1}] ({cite(h)}, 점수 {h.score:.2f})\n{h.text}"
             for i, h in enumerate(hits)
         ) or "(검색 결과 없음)"
         text = (self.template or DEFAULT_TEMPLATE).replace("{context}", context_text).replace(

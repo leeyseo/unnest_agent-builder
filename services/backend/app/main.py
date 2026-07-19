@@ -188,7 +188,7 @@ def get_run(run_id: str) -> dict:
 def upload_document(
     file: UploadFile = File(...),
     kb_id: str = Form(...),
-    ingest_flow_id: str = Form(default=ingest.DEFAULT_INGEST_FLOW_ID),
+    ingest_flow_id: str = Form(default=""),
 ) -> StreamingResponse:
     try:
         provisioner.get_kb(kb_id)
@@ -198,6 +198,12 @@ def upload_document(
     except provisioner.ProvisionError as ex:
         raise HTTPException(status_code=502, detail=str(ex)) from ex
 
+    # ingest flow 미지정 시 확장자에 맞는 기본 flow 자동 선택
+    if not ingest_flow_id:
+        try:
+            ingest_flow_id = ingest.flow_id_for_file(file.filename or "")
+        except ValueError as ex:
+            raise HTTPException(status_code=422, detail=str(ex)) from ex
     flow_data = get_flow(ingest_flow_id)
     safe_name = Path(file.filename or "upload.bin").name
     dest = UPLOAD_DIR / f"{uuid.uuid4().hex[:8]}_{safe_name}"

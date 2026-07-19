@@ -380,18 +380,29 @@ React + Vite + TypeScript + `@xyflow/react` + zustand.
 | ChatInput | io | — | Message | 채팅 진입점 |
 | ChatOutput | io | Message | — | 채팅 종점 |
 | PDFParser | parsers | RawFile | NormalizedDocument | pypdf, max_pages, ocr(auto/off/force — 텍스트 레이어 없으면 Windows OCR 폴백, 리눅스 런타임용 OCR은 백로그) |
-| SimpleChunker | chunkers | NormalizedDocument | list[Chunk] | chunk_size, overlap |
+| DOCXParser | parsers | RawFile | NormalizedDocument | python-docx, 문단+표 |
+| HWPXParser | parsers | RawFile | NormalizedDocument | zip+XML 표준 라이브러리, 구형 .hwp 미지원 |
+| TextParser | parsers | RawFile | NormalizedDocument | txt/md, utf-8/cp949 자동 판별 |
+| SimpleChunker | chunkers | NormalizedDocument | list[Chunk] | chunk_size, overlap (문자 단위) |
+| SentenceChunker | chunkers | NormalizedDocument | list[Chunk] | 문장 경계 보존, max_chars, 겹침 문장 수 |
+| ArticleChunker | chunkers | NormalizedDocument | list[Chunk] | "제N조" 경계 분리, article_no가 provenance로 남음 |
 | LocalEmbedder | embeddings | list[Chunk] | list[Chunk] | fastembed(ONNX), EMBED_MODEL 기본: paraphrase-multilingual-MiniLM-L12-v2 (dim 384) |
 | Neo4jWriter | graphdb | list[Chunk] | IngestReport | kb_id, 접속은 env/카탈로그 |
-| Neo4jRetriever | graphdb | Message | list[RetrievalHit] | kb_id, top_k, 벡터+그래프 탐색 |
+| Neo4jRetriever | graphdb | Message | list[RetrievalHit] | 벡터(cosine) 검색. kb_id, top_k, expand(이웃 청크 ±n 병합) |
+| KeywordRetriever | graphdb | Message | list[RetrievalHit] | 풀텍스트(Lucene) 검색 — 고유명사·조문번호에 강함 |
+| HybridRetriever | graphdb | Message | list[RetrievalHit] | 벡터+키워드 RRF 융합, rrf_k. 대부분의 기본값 |
 | PromptTemplate | llm | Message + list[RetrievalHit] | Message | template ({question},{context}) |
 | RetrievalPreview | formatters | list[RetrievalHit] | Message | 검색 결과를 텍스트로 정리 — LLM 없이 검색 flow를 채팅으로 테스트 |
 | OpenAICompatLLM | llm | Message | Message | temperature; LLM_* env |
 
 **확장 백로그** (구조는 위와 동일, 파일 추가만으로 들어옴):
-HWPXParser, DOCXParser, ImageOCRParser, ArticleChunker(법령 조문), SemanticChunker,
-GraphExtractor(LLM 엔티티→:Entity), VectorRetriever(외부 벡터DB), HybridRetriever,
-Reranker, ConversationSummarizer, HTTPTool, 정부24/국가법령 조회 Tool.
+ImageOCRParser(리눅스 런타임용), SemanticChunker, GraphExtractor(LLM 엔티티→:Entity),
+VectorRetriever(외부 벡터DB), Reranker, ConversationSummarizer, HTTPTool,
+정부24/국가법령 조회 Tool.
+
+**ingest flow 자동 선택**: `POST /api/documents`에 ingest_flow_id를 안 주면 파일
+확장자로 기본 flow를 고른다 (pdf/docx/hwpx/txt·md). 법령 문서용
+`ingest-law-pdf`(조문 청커)는 명시적으로 지정해 사용한다.
 
 ---
 

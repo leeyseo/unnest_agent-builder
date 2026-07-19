@@ -79,20 +79,31 @@
 └── bundles/          # 번들 산출물 (gitignore)
 ```
 
-### 컴포넌트 목록 (11종)
+### 컴포넌트 목록 (18종) — RAG 전략을 조립식으로 선택
 
-| 컴포넌트 | 입력 → 출력 | 비고 |
+| 분류 | 컴포넌트 | 비고 |
 |---|---|---|
-| ChatInput / ChatOutput | — → Message / Message → — | 채팅 진입·종점 |
-| FileInput | — → RawFile | 파일 업로드 슬롯 |
-| PDFParser | RawFile → NormalizedDocument | pypdf + **OCR 자동 폴백**(텍스트 레이어 없는 PDF) |
-| SimpleChunker | NormalizedDocument → list[Chunk] | 크기/겹침 조절, 페이지 provenance 유지 |
-| LocalEmbedder | list[Chunk] → list[Chunk] | fastembed(ONNX), 다국어 MiniLM 384차원 |
-| Neo4jWriter | list[Chunk] → IngestReport | (:Document)-[:HAS_CHUNK]->(:Chunk) 적재 |
-| Neo4jRetriever | Message → list[RetrievalHit] | 벡터 인덱스 검색 + 출처 조인 |
-| PromptTemplate | Message + list[RetrievalHit] → Message | {question}/{context}, 인용 강제 프롬프트 |
-| OpenAICompatLLM | Message → Message | OpenAI 호환이면 전부 (GPT/vLLM/Ollama) |
-| RetrievalPreview | list[RetrievalHit] → Message | **LLM 없이** 검색 결과를 채팅으로 확인 |
+| io | ChatInput / ChatOutput / FileInput | 채팅 진입·종점, 파일 슬롯 |
+| **파서** | PDFParser | pypdf + **OCR 자동 폴백**(텍스트 레이어 없는 PDF) |
+| | DOCXParser | 워드 문단+표 (python-docx) |
+| | HWPXParser | 한글 hwpx (zip+XML, 표준 라이브러리만) |
+| | TextParser | txt/md, utf-8/cp949 자동 판별 |
+| **청커** | SimpleChunker | 문자 크기/겹침 (기본값) |
+| | SentenceChunker | 문장 경계 보존 — 문장이 잘리지 않음 |
+| | ArticleChunker | 법령 "제N조" 단위 분리, 조문번호가 인용에 남음 |
+| 임베딩 | LocalEmbedder | fastembed(ONNX), 다국어 MiniLM 384차원 |
+| **검색** | Neo4jRetriever (벡터) | cosine 유사도 — 의미 기반. `expand`로 이웃 청크 ±n 병합 |
+| | KeywordRetriever | 풀텍스트(Lucene) — 고유명사·조문번호·코드에 강함 |
+| | HybridRetriever | 벡터+키워드 **RRF 융합** — 대부분의 경우 최선 기본값 |
+| graphdb | Neo4jWriter | (:Document)-[:HAS_CHUNK]->(:Chunk) 적재 |
+| llm | PromptTemplate | {question}/{context}, 출처(조문·페이지) 인용 강제 |
+| | OpenAICompatLLM | OpenAI 호환이면 전부 (GPT/vLLM/Ollama) |
+| 포맷터 | RetrievalPreview | **LLM 없이** 검색 결과를 채팅으로 확인 |
+
+문서 업로드 시 확장자에 맞는 파서 flow가 자동 선택되고(pdf/docx/hwpx/txt/md),
+법령 문서는 조문 청커 flow(`ingest-law-pdf`)를 지정해 적재할 수 있다.
+검색 전략은 캔버스에서 노드만 갈아끼우면 되므로, 같은 KB로
+벡터/키워드/하이브리드를 나란히 비교할 수 있다.
 
 **새 컴포넌트 추가 = 파이썬 파일 1개.** `packages/components/agentcomponents/{카테고리}/`에
 클래스를 만들고 백엔드를 재시작하면 사이드바에 자동 등록된다 (프론트 수정 불필요).
