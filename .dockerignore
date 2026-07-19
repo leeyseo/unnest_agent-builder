@@ -1,0 +1,8 @@
+.venv/
+node_modules/
+data/
+bundles/
+flows/
+.git/
+**/__pycache__/
+services/frontend/

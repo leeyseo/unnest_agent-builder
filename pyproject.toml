@@ -1,0 +1,25 @@
+[project]
+name = "agent-platform"
+version = "0.1.0"
+description = "온프레미스 에이전트 빌더 플랫폼 (모노레포 루트)"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv.workspace]
+members = [
+    "packages/sdk",
+    "packages/engine",
+    "packages/components",
+    "services/backend",
+]
+
+[tool.uv.sources]
+agentsdk = { workspace = true }
+agentengine = { workspace = true }
+agentcomponents = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]

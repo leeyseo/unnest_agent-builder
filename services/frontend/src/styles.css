@@ -1,0 +1,128 @@
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+  background: #18181b; color: #e4e4e7; font-size: 13px;
+}
+.app { display: flex; flex-direction: column; height: 100%; }
+.main { display: flex; flex: 1; min-height: 0; }
+.muted { color: #71717a; font-size: 11px; }
+button {
+  background: #27272a; color: #e4e4e7; border: 1px solid #3f3f46;
+  border-radius: 6px; padding: 5px 10px; cursor: pointer; font-size: 12px;
+}
+button:hover { background: #3f3f46; }
+button:disabled { opacity: 0.5; cursor: default; }
+input, select, textarea {
+  background: #09090b; color: #e4e4e7; border: 1px solid #3f3f46;
+  border-radius: 6px; padding: 5px 8px; font-size: 12px; width: 100%;
+}
+
+/* ---------- Toolbar ---------- */
+.toolbar {
+  display: flex; align-items: center; gap: 10px; padding: 8px 14px;
+  background: #09090b; border-bottom: 1px solid #27272a;
+}
+.brand { color: #a78bfa; }
+.flow-name { width: 220px; font-weight: 600; }
+.toolbar-actions { margin-left: auto; display: flex; gap: 6px; position: relative; }
+.run-btn { background: #166534; border-color: #22c55e; }
+.run-btn:hover { background: #15803d; }
+.dropdown { position: relative; }
+.dropdown-list {
+  position: absolute; top: 32px; right: 0; z-index: 50; min-width: 260px;
+  background: #18181b; border: 1px solid #3f3f46; border-radius: 8px; overflow: hidden;
+}
+.dropdown-item { padding: 8px 12px; cursor: pointer; }
+.dropdown-item:hover { background: #27272a; }
+
+/* ---------- Sidebar ---------- */
+.sidebar {
+  width: 230px; overflow-y: auto; padding: 10px;
+  background: #09090b; border-right: 1px solid #27272a; flex-shrink: 0;
+}
+.sidebar h2 { font-size: 12px; text-transform: uppercase; color: #a1a1aa; margin: 14px 0 6px; }
+.sidebar h3 { font-size: 11px; color: #71717a; margin: 8px 0 4px; }
+.palette-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 8px; margin: 3px 0; background: #18181b;
+  border: 1px solid #27272a; border-radius: 6px; cursor: grab;
+}
+.palette-item:hover { border-color: #a78bfa; }
+.palette-type { font-size: 10px; color: #52525b; }
+.kb-create { display: flex; gap: 4px; margin-bottom: 6px; }
+.kb-create button { flex-shrink: 0; }
+.kb-item {
+  padding: 6px 8px; margin: 3px 0; background: #18181b;
+  border: 1px solid #27272a; border-radius: 6px;
+}
+.kb-main { display: flex; align-items: center; gap: 6px; cursor: grab; }
+.kb-main:hover { color: #a78bfa; }
+.kb-dot { width: 8px; height: 8px; border-radius: 50%; background: #71717a; }
+.kb-ready { background: #22c55e; }
+.kb-starting { background: #eab308; }
+.kb-failed { background: #ef4444; }
+.kb-name { flex: 1; font-weight: 600; }
+.kb-docs { font-size: 10px; color: #71717a; }
+.kb-actions { display: flex; gap: 4px; margin-top: 5px; }
+.kb-chip {
+  font-size: 10px; padding: 2px 6px; background: #27272a;
+  border: 1px solid #3f3f46; border-radius: 4px; cursor: grab; color: #a1a1aa;
+}
+
+/* ---------- Canvas & Nodes ---------- */
+.canvas { flex: 1; min-width: 0; }
+.node {
+  min-width: 180px; background: #18181b; border: 2px solid #3f3f46;
+  border-radius: 10px; padding: 8px 0 6px; font-size: 12px;
+}
+.node-pulse { animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 20px #3b82f6; } }
+.node-header { display: flex; justify-content: space-between; padding: 0 10px 6px; border-bottom: 1px solid #27272a; }
+.node-title { font-weight: 700; }
+.node-cat { font-size: 10px; color: #71717a; }
+.node-kb { padding: 3px 10px; font-size: 10px; color: #22d3ee; }
+.node-error { padding: 3px 10px; font-size: 10px; color: #ef4444; }
+.node-ok { padding: 3px 10px; font-size: 10px; color: #22c55e; }
+.node-ports { display: flex; justify-content: space-between; padding-top: 6px; gap: 10px; }
+.node-inputs, .node-outputs { display: flex; flex-direction: column; gap: 6px; }
+.port-row { display: flex; align-items: center; gap: 6px; }
+.port-row-out { justify-content: flex-end; }
+.port-label { font-size: 11px; color: #a1a1aa; padding: 0 4px; }
+.node .react-flow__handle { width: 10px; height: 10px; border: 2px solid #09090b; }
+.node-unknown { padding: 10px; color: #ef4444; border: 2px solid #ef4444; border-radius: 10px; }
+
+/* ---------- Right panel ---------- */
+.right-panel {
+  width: 320px; flex-shrink: 0; display: flex; flex-direction: column;
+  background: #09090b; border-left: 1px solid #27272a; overflow-y: auto;
+}
+.param-panel { padding: 12px; border-bottom: 1px solid #27272a; }
+.param-panel h3 { margin: 0 0 4px; }
+.param-field { display: block; margin: 8px 0; }
+.param-field > span { display: block; margin-bottom: 3px; color: #a1a1aa; font-size: 11px; }
+.param-field em { color: #ef4444; }
+.secret-field { display: flex; gap: 4px; }
+.error-box { margin-top: 10px; padding: 8px; background: #7f1d1d33; border: 1px solid #ef4444; border-radius: 8px; }
+.error-box h4 { margin: 0 0 4px; color: #f87171; }
+.error-box pre { font-size: 10px; overflow-x: auto; max-height: 180px; }
+.output-box { margin-top: 10px; padding: 8px; background: #14532d33; border: 1px solid #22c55e55; border-radius: 8px; }
+.output-box h4 { margin: 0 0 4px; color: #4ade80; }
+.output-box pre { font-size: 10px; overflow-x: auto; white-space: pre-wrap; max-height: 200px; }
+
+/* ---------- Chat ---------- */
+.chat-panel { display: flex; flex-direction: column; flex: 1; min-height: 260px; }
+.chat-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; }
+.chat-header h3 { margin: 0; }
+.chat-body { flex: 1; overflow-y: auto; padding: 0 12px; }
+.chat-msg { margin: 6px 0; padding: 8px 10px; border-radius: 10px; white-space: pre-wrap; }
+.chat-user { background: #1d4ed8; margin-left: 30px; }
+.chat-assistant { background: #27272a; margin-right: 30px; }
+.chat-system { background: #7f1d1d55; font-size: 11px; }
+.chat-input { display: flex; gap: 6px; padding: 10px 12px; }
+
+/* ---------- Log strip ---------- */
+.log-strip {
+  padding: 4px 14px; background: #09090b; border-top: 1px solid #27272a;
+  font-size: 11px; color: #71717a; font-family: Consolas, monospace; min-height: 22px;
+}

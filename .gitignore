@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+.venv/
+.uv/
+node_modules/
+dist/
+services/frontend/dist/
+data/
+bundles/
+*.sqlite3
+.env
+.credentials.key
+# 로컬 테스트용 문서 (원하면 samples/ 폴더로 옮겨 커밋)
+실험문서.pdf
+.pytest_cache/
+.ruff_cache/

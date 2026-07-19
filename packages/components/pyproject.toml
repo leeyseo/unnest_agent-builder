@@ -1,0 +1,27 @@
+[project]
+name = "agentcomponents"
+version = "0.1.0"
+description = "컴포넌트 라이브러리 (카테고리별 폴더)"
+requires-python = ">=3.12"
+dependencies = [
+    "agentsdk",
+    "agentengine",
+    "pypdf>=4.0",
+    "pymupdf>=1.24",
+    "pillow>=10.0",
+    "winocr>=0.0.14; sys_platform == 'win32'",
+    "fastembed>=0.5",
+    "neo4j>=5.20",
+    "httpx>=0.27",
+]
+
+[tool.uv.sources]
+agentsdk = { workspace = true }
+agentengine = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["agentcomponents"]

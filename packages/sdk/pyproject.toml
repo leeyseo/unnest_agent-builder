@@ -1,0 +1,13 @@
+[project]
+name = "agentsdk"
+version = "0.1.0"
+description = "컴포넌트 SDK: BaseComponent, 포트/타입, 데코레이터"
+requires-python = ">=3.12"
+dependencies = ["pydantic>=2.7"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["agentsdk"]
