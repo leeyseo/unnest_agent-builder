@@ -67,7 +67,8 @@ def rrf_fuse(result_lists: list[list[RetrievalHit]], top_k: int, k: int = 60) ->
     strategies: dict[tuple, list[str]] = {}
     for hits in result_lists:
         for rank, hit in enumerate(hits):
-            key = (hit.provenance.get("doc_title"), hit.provenance.get("seq"))
+            key = (hit.provenance.get("kb_id"), hit.provenance.get("doc_title"),
+                   hit.provenance.get("seq"))
             scores[key] = scores.get(key, 0.0) + 1.0 / (k + rank + 1)
             best.setdefault(key, hit)
             strategies.setdefault(key, []).append(hit.provenance.get("strategy", "?"))
