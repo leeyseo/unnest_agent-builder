@@ -393,6 +393,7 @@ React + Vite + TypeScript + `@xyflow/react` + zustand.
 | DOCXParser | parsers | RawFile | NormalizedDocument | python-docx, 문단+표 |
 | HWPXParser | parsers | RawFile | NormalizedDocument | zip+XML 표준 라이브러리, 구형 .hwp 미지원 |
 | TextParser | parsers | RawFile | NormalizedDocument | txt/md, utf-8/cp949 자동 판별 |
+| TableParser | parsers | RawFile + NormalizedDocument(선택) | NormalizedDocument | 보강 파서 체인: PDF 표를 type="table" 블록으로 추가 (pymupdf). 기본 파서 뒤에 연결, 블록은 페이지 순 병합. 청커는 표 블록을 통째로 보존 |
 | SimpleChunker | chunkers | NormalizedDocument | list[Chunk] | chunk_size, overlap (문자 단위) |
 | SentenceChunker | chunkers | NormalizedDocument | list[Chunk] | 문장 경계 보존, max_chars, 겹침 문장 수 |
 | ArticleChunker | chunkers | NormalizedDocument | list[Chunk] | "제N조" 경계 분리, article_no가 provenance로 남음 |

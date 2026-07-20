@@ -24,9 +24,15 @@ class SimpleChunker(Component):
         size = max(int(self.chunk_size or 800), 50)
         overlap = min(max(int(self.overlap or 0), 0), size - 1)
 
+        # 표 블록은 문자 단위로 자르면 행이 깨진다 — 통째로 청크 1개씩 보존
+        table_blocks = [
+            b for b in self.document.blocks if b.type == "table" and b.content.strip()
+        ]
         # (문자오프셋, 페이지) 매핑을 유지하며 전체 텍스트 조립 — provenance 보존
         pieces: list[tuple[str, dict]] = [
-            (b.content, b.meta) for b in self.document.blocks if b.content.strip()
+            (b.content, b.meta)
+            for b in self.document.blocks
+            if b.type != "table" and b.content.strip()
         ]
         full = ""
         spans: list[tuple[int, int, dict]] = []  # start, end, meta
@@ -56,6 +62,17 @@ class SimpleChunker(Component):
                 )
                 seq += 1
             pos += size - overlap
+
+        for tb in table_blocks:
+            pages = [tb.meta["page"]] if tb.meta.get("page") else []
+            chunks.append(
+                Chunk(
+                    text=tb.content,
+                    meta={"source": self.document.source, "pages": pages,
+                          "seq": seq, "block_type": "table"},
+                )
+            )
+            seq += 1
 
         if not chunks:
             raise EngineError("문서에서 만들 청크가 없습니다 (빈 문서).", BAD_INPUT)
