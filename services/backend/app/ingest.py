@@ -38,6 +38,32 @@ def _pipeline(name: str, parser_type: str, chunker_type: str = "SimpleChunker",
     }
 
 
+def _chain_pdf_table_pipeline() -> dict:
+    """보강 파서 체인: 기본 텍스트 파서 뒤에 표 파서가 표 블록을 병합한다."""
+    return {
+        "version": "1",
+        "name": "문서 적재 (PDF+표 체인)",
+        "nodes": [
+            {"id": "n1", "type": "FileInput", "params": {}},
+            {"id": "n2", "type": "PDFParser", "params": {}},
+            {"id": "n3", "type": "TableParser", "params": {}},
+            {"id": "n4", "type": "SimpleChunker", "params": {"chunk_size": 800, "overlap": 100}},
+            {"id": "n5", "type": "LocalEmbedder", "params": {}},
+            {"id": "n6", "type": "Neo4jWriter", "params": {"kb_id": ""}},
+        ],
+        "edges": [
+            {"from": ["n1", "file"], "to": ["n2", "file"]},
+            {"from": ["n1", "file"], "to": ["n3", "file"]},      # 원본을 표 파서에도
+            {"from": ["n2", "document"], "to": ["n3", "document"]},  # 파서 체인
+            {"from": ["n3", "enriched"], "to": ["n4", "document"]},
+            {"from": ["n4", "chunks"], "to": ["n5", "chunks"]},
+            {"from": ["n5", "embedded"], "to": ["n6", "chunks"]},
+        ],
+        "ui": {"positions": {"n1": [40, 120], "n2": [280, 40], "n3": [540, 120],
+                              "n4": [800, 120], "n5": [1040, 120], "n6": [1280, 120]}},
+    }
+
+
 # flow_id → (flow, 담당 확장자들)
 BUILTIN_INGEST_FLOWS: dict[str, tuple[dict, list[str]]] = {
     DEFAULT_INGEST_FLOW_ID: (_pipeline("기본 문서 적재 (PDF)", "PDFParser"), [".pdf"]),
@@ -49,6 +75,7 @@ BUILTIN_INGEST_FLOWS: dict[str, tuple[dict, list[str]]] = {
                   {"max_chars": 2000}),
         [],  # 확장자 자동 매칭 없음 — 명시적으로 선택해서 사용
     ),
+    "ingest-pdf-table": (_chain_pdf_table_pipeline(), []),  # 표 많은 PDF용 — 명시적 선택
 }
 
 

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from agentsdk import NormalizedDocument, RawFile
+from agentsdk import RawFile
 
 
 @pytest.fixture(scope="module")
