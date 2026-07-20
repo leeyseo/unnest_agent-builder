@@ -179,8 +179,14 @@ class PDFParser(Component):
 **새 컴포넌트 추가 절차 (항상 이 순서):**
 1. `packages/components/agentcomponents/{카테고리}/xxx.py` 작성
 2. 의존성이 늘면 `services/runtime/requirements.txt`에 추가 (표준 이미지 재빌드)
-3. 단위 테스트: 샘플 입력 → run() → 출력 타입 검증
+3. 계약 검증: `uv run python -m agentsdk.validate xxx.py` — 카테고리별 포트 계약
+   (파서 RawFile→NormalizedDocument 등), 비밀값 하드코딩, 의존성 누락을 검사한다.
+   CI(tests/test_component_contract.py)가 등록된 전체 컴포넌트에 같은 검증을 돌린다.
 4. 재기동하면 사이드바에 자동 등록 — 프론트 수정 금지
+
+**GUI 업로드 경로**: 툴바 "➕ 컴포넌트" → .py 업로드 → 백엔드가 서브프로세스에서
+같은 검증기를 실행 → 통과 시 `agentcomponents/contrib/`(gitignore)에 배치하고
+레지스트리 리로드 → 재시작 없이 사이드바 등록. 내장 컴포넌트와 이름이 겹치면 거부.
 
 ---
 
@@ -247,6 +253,7 @@ class PDFParser(Component):
 
 ```
 GET  /api/components                     # 컴포넌트 스펙 목록 (사이드바 소스)
+POST /api/components/upload {file:.py}   # 컴포넌트 업로드 → 계약 검증 통과 시 contrib/ 등록
 GET  /api/kb                             # KB 카탈로그 (사이드바 'KB' 섹션 소스)
 POST /api/kb {name}                      # KB 생성 → 프로비저너가 컨테이너 기동
 DELETE /api/kb/{kb_id}

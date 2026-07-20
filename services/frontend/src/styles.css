@@ -149,3 +149,15 @@ input, select, textarea {
   padding: 4px 14px; background: #09090b; border-top: 1px solid #27272a;
   font-size: 11px; color: #71717a; font-family: Consolas, monospace; min-height: 22px;
 }
+
+/* 컴포넌트 업로드 모달 */
+.comp-upload-modal { width: 560px; max-height: 84vh; overflow-y: auto; }
+.comp-upload-modal details { margin: 8px 0; border: 1px solid #ffffff1a; border-radius: 8px; padding: 6px 10px; }
+.comp-upload-modal summary { cursor: pointer; font-weight: 600; font-size: 13px; }
+.guide-list { margin: 8px 0 4px; padding-left: 18px; font-size: 12px; line-height: 1.6; }
+.guide-list code { background: #ffffff14; padding: 1px 4px; border-radius: 4px; }
+.guide-code { font-size: 11px; background: #00000055; padding: 8px; border-radius: 6px; overflow-x: auto; }
+.contract-table { width: 100%; font-size: 11px; border-collapse: collapse; margin: 6px 0; }
+.contract-table th, .contract-table td { border: 1px solid #ffffff22; padding: 4px 6px; text-align: left; }
+.report-item { margin: 6px 0; font-size: 12px; }
+.report-item p { margin: 2px 0 2px 14px; }

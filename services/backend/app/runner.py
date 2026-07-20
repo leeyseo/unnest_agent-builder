@@ -22,6 +22,19 @@ def registry() -> ComponentRegistry:
     return _registry
 
 
+def reload_registry() -> ComponentRegistry:
+    """contrib에 새 컴포넌트가 배치된 뒤 재스캔 (업로드 API가 호출)."""
+    import sys
+
+    global _registry
+    # contrib 모듈은 내용이 바뀔 수 있으므로 임포트 캐시를 비워 다시 읽게 한다
+    for name in [m for m in sys.modules if m.startswith("agentcomponents.contrib")]:
+        del sys.modules[name]
+    _registry = ComponentRegistry()
+    _registry.scan_package("agentcomponents")
+    return _registry
+
+
 def make_context(run_input: dict | None) -> ExecutionContext:
     return ExecutionContext(
         run_input=run_input,

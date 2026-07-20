@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import types as _types
 import typing
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, get_args, get_origin
 
 

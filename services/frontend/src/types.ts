@@ -26,6 +26,22 @@ export interface ComponentSpec {
   params: ParamSpec[];
 }
 
+export interface ComponentValidationReport {
+  component: string;
+  category: string;
+  ok: boolean;
+  errors: string[];
+  warnings: string[];
+  dynamic: "not_run" | "ok" | "skipped" | "failed";
+}
+
+export interface ComponentUploadResult {
+  ok: boolean;
+  reports: ComponentValidationReport[];
+  registered?: string[];
+  load_error?: string;
+}
+
 export interface KB {
   kb_id: string;
   name: string;

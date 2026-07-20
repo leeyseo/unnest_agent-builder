@@ -41,6 +41,84 @@ def list_components() -> list[dict]:
     return runner.registry().specs()
 
 
+@app.post("/api/components/upload")
+def upload_component(file: UploadFile = File(...)) -> dict:
+    """컴포넌트 .py 업로드 — 계약 검증기를 통과해야 contrib/에 등록된다.
+
+    검증은 서브프로세스에서 격리 실행한다 (임포트 부작용이 백엔드를 오염시키지 않게).
+    응답: {ok, reports, registered} — 실패해도 200으로 리포트를 돌려줘 UI가 표시한다.
+    """
+    import os
+    import re as _re
+    import subprocess
+    import sys
+
+    name = Path(file.filename or "").name
+    if not name.endswith(".py"):
+        raise HTTPException(status_code=422, detail="컴포넌트는 파이썬 파일(.py) 하나로 업로드하세요")
+    content = file.file.read()
+    if len(content) > 200_000:
+        raise HTTPException(status_code=422, detail="파일이 너무 큽니다 (200KB 제한)")
+
+    stem = _re.sub(r"[^a-zA-Z0-9_]", "_", Path(name).stem) or "component"
+    tmp = UPLOAD_DIR / f"__component_{uuid.uuid4().hex[:8]}_{stem}.py"
+    tmp.write_bytes(content)
+    try:
+        proc = subprocess.run(
+            [sys.executable, "-m", "agentsdk.validate", "--json", str(tmp)],
+            capture_output=True, text=True, encoding="utf-8", timeout=120,
+            # Windows 콘솔 기본 인코딩(cp949)이 한글/특수문자 출력에서 깨지는 것 방지
+            env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+        )
+        try:
+            result = json.loads(proc.stdout.strip().splitlines()[-1])
+        except (json.JSONDecodeError, IndexError):
+            tail = (proc.stderr or proc.stdout or "")[-500:]
+            raise HTTPException(
+                status_code=422,
+                detail=f"검증기 실행 실패 — 파일이 임포트되지 않습니다: {tail}",
+            ) from None
+        if "load_error" in result:
+            return {"ok": False, "reports": [], "load_error": result["load_error"]}
+        reports = result["reports"]
+
+        # 이름 충돌: 기존 내장 컴포넌트와 겹치면 거부, contrib 재업로드는 갱신 허용
+        reg = runner.registry()
+        conflicts = []
+        for r in reports:
+            try:
+                existing = reg.get(r["component"])
+            except KeyError:
+                continue
+            if not existing.__module__.startswith("agentcomponents.contrib"):
+                conflicts.append(r["component"])
+        if conflicts:
+            return {
+                "ok": False, "reports": reports,
+                "load_error": f"이미 내장된 컴포넌트와 이름이 겹칩니다: {conflicts} — "
+                              "클래스 이름을 바꿔서 업로드하세요",
+            }
+
+        if any(not r["ok"] for r in reports):
+            return {"ok": False, "reports": reports}
+
+        # 통과 → contrib 패키지에 배치 + 레지스트리 리로드
+        import agentcomponents
+
+        contrib_dir = Path(agentcomponents.__path__[0]) / "contrib"
+        contrib_dir.mkdir(exist_ok=True)
+        init = contrib_dir / "__init__.py"
+        if not init.exists():
+            init.write_text('"""업로드로 등록된 컴포넌트 (POST /api/components/upload)."""\n',
+                            encoding="utf-8")
+        (contrib_dir / f"{stem}.py").write_bytes(content)
+        runner.reload_registry()
+        return {"ok": True, "reports": reports,
+                "registered": [r["component"] for r in reports]}
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
 # ------------------------------------------------------------------ KB
 
 

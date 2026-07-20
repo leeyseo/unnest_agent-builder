@@ -1,4 +1,4 @@
-import type { ComponentSpec, FlowJson, KB, RunEvent } from "./types";
+import type { ComponentSpec, ComponentUploadResult, FlowJson, KB, RunEvent } from "./types";
 
 async function j<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -48,6 +48,13 @@ export const api = {
       j<{ path: string; kb_id: string; files: Record<string, number> }>(r),
     ),
   credentials: () => fetch("/api/credentials").then((r) => j<string[]>(r)),
+  uploadComponent: (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return fetch("/api/components/upload", { method: "POST", body: fd }).then((r) =>
+      j<ComponentUploadResult>(r),
+    );
+  },
   createCredential: (name: string, value: string) =>
     fetch("/api/credentials", {
       method: "POST",

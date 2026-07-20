@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { api, runFlow } from "../api";
 import { useStore } from "../store";
 import type { FlowJson } from "../types";
+import { ComponentUploadModal } from "./ComponentUploadModal";
 
 /** 저장 안 됐으면 저장하고 flowId를 반환. */
 export async function ensureSaved(): Promise<string> {
@@ -29,6 +30,7 @@ export function Toolbar() {
   const importRef = useRef<HTMLInputElement>(null);
   const [flowList, setFlowList] = useState<{ id: string; name: string }[]>([]);
   const [bundling, setBundling] = useState(false);
+  const [showCompUpload, setShowCompUpload] = useState(false);
 
   async function save() {
     try {
@@ -129,6 +131,12 @@ export function Toolbar() {
       <span className="muted">{flowId ?? "(저장 안 됨)"}</span>
       <div className="toolbar-actions">
         <button onClick={newFlow}>새 flow</button>
+        <button
+          onClick={() => setShowCompUpload(true)}
+          title="컴포넌트 .py 업로드 — 검증 통과 시 사이드바에 즉시 등록"
+        >
+          ➕ 컴포넌트
+        </button>
         <div className="dropdown">
           <button onClick={openFlowList}>열기</button>
           {flowList.length > 0 && (
@@ -161,6 +169,7 @@ export function Toolbar() {
         style={{ display: "none" }}
         onChange={(e) => importFlow(e.target.files?.[0])}
       />
+      {showCompUpload && <ComponentUploadModal onClose={() => setShowCompUpload(false)} />}
     </header>
   );
 }
